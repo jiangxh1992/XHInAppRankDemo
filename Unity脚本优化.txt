@@ -1,0 +1,62 @@
+【Unity脚本优化策略总结（总结自《Unity5 Game Optimization》）】
+-1.缓存组件的引用（在CPU内存没有十分紧张的情况下）；
+-2.使用最高效的获取组件的方法（使用GetComponent<T>()和GetComponent(typeof(T))，不使用GetComponent(string)）；
+-3.移除空回调声明；
+4.避免在运行时使用Find()和SendMessage()方法；
+5.静态类；
+6.单例组件；
+7.设置预加载物体的引用：利用Unity的组件序列化，但是会public暴露，可以private声明，然后使用[SerializeField]属性强制序列化；
+  Unity不能序列化静态区域、只读变量和字典；
+8.
+9.关掉不用的脚本和物体；
+10.暂时关掉看不见的物体（OnBecameVisible() 和 OnBecameInvisible()）；
+11.关掉太远的近乎消失的物体；
+12.用距离的平方sqrMagnitude代替距离比较magnitude，CPU比较擅长浮点数乘法，但浮点根号运算很费【权衡精度损失的承受度】；
+13.避免从物体上读取string属性，会引起栈内存分配，避免tag和name属性的使用，一定要用tag验证物体时使用gameObject.CompareTag()方法代替。
+14.Update, Coroutines, and InvokeRepeating p138
+15.考虑缓存transform的变化值，transform的更改会引起变化矩阵相乘。在下一帧提交对transform的更改；减少UnityEngine.Object的null比较，多用assertion，少用null保护；
+16.更高效的物体空引用检查：(!System.Object.ReferenceEquals(gameObject, null)代替（gameObject != null）；
+17.gameobject的pool应该支持“屏幕移除”，即有一个降温过程，用完了先移出屏幕，在用到再立马回到屏幕，移出屏幕后一直用不到了再慢慢销毁；
+18.transform的孩子不应太多，否则对其position、rotation等进行更改时会引起更大的消耗；
+19.foreach unity5.3
+20. class(引用计数)-struct
+
+【批处理优化】
+静态批处理
+动态批处理
+
+
+【材质贴图优化】p189
+压缩格式
+2的n次方正方形图片，压缩率控制，打图集；
+Mip Map；
+Sparse Textures（Tiled-Textures）稀疏纹理；
+过程纹理；
+ETC2(ETC1+Alpha)/PVRTC4
+
+【物理优化】
+1.不移动的物体要设置成静态collider（不带rigidbody），减少开销。尽可能避免在运行时创建静态collider或者在运行时改变静态collider的position和rotation等，因为都会导致静态collider的数据结构重新生成；
+2.尽可能的将物体的scale设置成1；
+3.Edit|Project Settings|Physics(or Physics2D)|Layer Collision Matrix.优化碰撞矩阵，关闭不可能碰撞的物体间的碰撞检测；
+
+
+【C#语言本身的优化】
+C#代码优化性能测试验证-Method方法优化
+1.函数返回值使用ref或out参数代替return值更高效；
+2.尽量减少函数调用深度，用顺序调用代替嵌套调用更高效；
+3.尽量减少函数参数，增加参数会增加内存使用降低性能；
+4.函数中频繁用的两个参数放到参数表前两位更高效，因为前两参数会存放在寄存器高速访问（64bit不明显）；
+
+
+List效率优化
+1.尽量告诉编译器List的容量capacity，防止频繁的内存重分配造成内存压力；
+2.当List中有大量元素并频繁需要移除元素的操作时，考虑使用Dictionary代替，因为List是连续空间结构，元素移除会导致后面所有元素的平移操作，效率很低，而Dictionary是哈希结构，使用桶排序索引，移除操作很高效；
+3.能用Array的不用List，能用List就不用ArrayList；
+
+StringBuilder的优化使用
+1.使用stringbuilder.Append(input, 3, 2);代替string temp = input.Substring(3, 2); buffer.Append(temp);
+2.使用StringBuilder连接字符串时，初始化最终字符串的容量效率会更高。当需要连接的字符串少于5个时，直接使用+号拼接更高效，只有要连续连接大量字符串时才用StringBuilder优化防止性能指数下降。
+
+
+【shader优化】
+1.shader传参尽量使用SetVector、SetArray等打包传递，减少cpu和gpu的通信次数降低开销；
